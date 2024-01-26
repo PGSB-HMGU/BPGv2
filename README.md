@@ -1,8 +1,8 @@
 # Summary
 This script takes as input the Phylogenetic Hierarchical Orthogroups (HOGs) from orthofinder and calcuates the core/shell/cloud of the investiaged genomes. In addition a list of all protein IDs included in the orthofinder analysis must be provided. 
 
-# requirements
-pandas
+# Requirements
+pandas, python3 
 
 # Definitions
 core genes: genes present in all genomes in any ratio (N:N)
