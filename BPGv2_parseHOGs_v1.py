@@ -144,62 +144,7 @@ def parseHOGs(hogsfile):
     return dGeneNumbers,dHOGs,dSpecies,ddHOGs
 
 
-def parsePassPort(passportdata,dSpecies):
-    d = defaultdict(list)
 
-    with open(passportdata, "r") as fdh:
-        lines = csv.reader(fdh,delimiter=",")
-        header = next(lines)
-        if header != None:
-            for line in lines:
-#                 print(line[4],line[7],line[8])
-#                 d[line[4]].append((line[7],line[8]))
-                d[line[4]] = [line[7],line[8]]
-
-#     print(len(d))
-
-    return d
-
-def parseGeneTags(genetags,dSpecies):
-    d = defaultdict(list)
-
-    with open(genetags, "r") as fdh:
-        lines = csv.reader(fdh,delimiter=";")
-        header = next(lines)
-        if header != None:
-            for line in lines:
-                gID = re.sub('ID=','',line[0])
-                m = re.sub('method=','',line[1])
-#                 print(gID,m)
-
-
-#     print(len(d))
-
-    return d
-
-
-def calcDistribution(dGeneNumbers,dGenesMissing):
-
-    d = defaultdict(list)
-    dd = {}
-    c = 0
-    for i in dGeneNumbers:
-        for x in range(0,77):
-            if dGeneNumbers[i].count(0) == x:
-                d[x].append(sum(dGeneNumbers[i]))
-
-    for k in d:
-        dd[k] = sum(d[k])
-        
-    for i in dGenesMissing:
-        c = c + len(dGenesMissing[i])
-
-    dd[76]=c
-
-    df = pd.DataFrame.from_dict(dd,orient='index',columns=['genes'])
-    df.index.name = 'genomes'
-    print(df)
-    df.to_csv("barley.conserved_variable.GeneNumbers.distribution.csv")
 
 
 
@@ -209,8 +154,7 @@ def main():
 
     hogsfile = sys.argv[1]
     allgIDs = sys.argv[2]
-    passPortData = '../of/230719_221008_BPGv1v2_passport_data.mod.csv'
-    genetags = '../of/BPGv2.projected_gene_tags.txt'
+
 
     dMapping = {}
     dMethod = {}
@@ -239,18 +183,7 @@ def main():
     dGeneNumbers,dHOGs,dSpecies,ddHOGs = parseHOGs(hogsfile)
     dGenesMissing = getMissingGenes(hogsfile,allgIDs)
 
-    dPassPortData = parsePassPort(passPortData,dSpecies)
-    parseGeneTags(genetags,dSpecies)
 
-
-    for h in ddHOGs:
-        for c in ddHOGs[h].cultivars:
-            ddHOGs[h].addPassport(dPassPortData[c][1])
-#             print(c,dPassPortData[c][1])
-
-
-#     for i in dSpecies:
-#         print(i,dSpecies[i],dPassPortData[dSpecies[i]][1])
 
 
     for i in dGeneNumbers:
@@ -263,25 +196,25 @@ def main():
         if dGeneNumbers[i].count(1) == len(dSpecies):
 #             print(i,"single-copy core",dGeneNumbers[i],len(dGeneNumbers[i]),sum(dGeneNumbers[i]),dGeneNumbers[i].count(1),dGeneNumbers[i].count(0),len(dSpecies))
             scHOGs[i] = ddHOGs[i]
-            singleCopyConservedHOGs[i] = ddHOGs[i]
+            # singleCopyConservedHOGs[i] = ddHOGs[i]
 #         if dGeneNumbers[i].count(0) in range(1,len(dSpecies)-1) and sum(dGeneNumbers[i]) != 1:
         if dGeneNumbers[i].count(0)  in range(1,len(dSpecies)-1) and sum(dGeneNumbers[i]) != 1:
 #             print(i,"shell",dGeneNumbers[i],len(dGeneNumbers[i]),sum(dGeneNumbers[i]),dGeneNumbers[i].count(1),dGeneNumbers[i].count(0),len(dSpecies))
 #             print(ddHOGs[i].ID,ddHOGs[i].cultivars,ddHOGs[i].passport)
 #             print(i,)
             shellHOGs[i] = ddHOGs[i]
-            variableHOGs[i] = ddHOGs[i]
+            # variableHOGs[i] = ddHOGs[i]
         if dGeneNumbers[i].count(0) != 0 and sum(dGeneNumbers[i]) == 1:
 # #             print(i,"genotype-specific",dGeneNumbers[i],len(dGeneNumbers[i]),sum(dGeneNumbers[i]),dGeneNumbers[i].count(1),dGeneNumbers[i].count(0),len(dSpecies))
 #         if dGeneNumbers[i].count(0) in range(1,len(dSpecies)-1) and sum(dGeneNumbers[i]) == 1:
 # #             print(i)
             gtHOGs[i] = ddHOGs[i]
-            variableHOGs[i] = ddHOGs[i]
+            # variableHOGs[i] = ddHOGs[i]
 
         if dGeneNumbers[i].count(0) == len(dSpecies)-1:
 # #             print(i,"genotype-specific",dGeneNumbers[i],len(dGeneNumbers[i]),sum(dGeneNumbers[i]),dGeneNumbers[i].count(1),dGeneNumbers[i].count(0),len(dSpecies))
             gtHOGs[i] = ddHOGs[i]
-            variableHOGs[i] = ddHOGs[i]
+            # variableHOGs[i] = ddHOGs[i]
 
 # #             print(i)
 
@@ -296,135 +229,44 @@ def main():
     print("genotype-specific HOGs:", len(gtHOGs))
     print("cloud:", len(cloud))    
     print("Total:",len(coreHOGs)+len(shellHOGs)+len(gtHOGs))
-    print()
-    print("conserved HOGs:", len(conservedHOGs))
-    print("sinlge-copy conserved HOGs:", len(singleCopyConservedHOGs))
-    print("variable HOGs:",len(variableHOGs))
 
-    for i in shellHOGs:
-        hog = shellHOGs[i]
-        for v in range(0,len(dSpecies)):
-            if dGeneNumbers[i][v] != 0:
-                if hog.passport[v] == 'landrace':
-#                     print(hog.ID,hog.passport,dGeneNumbers[i])
-                    dStatus['landrace'].add(hog.ID)
+    with open('core.HOGs.tsv','w') as fout:
+        hed = []
+        for i in dSpecies:
+            hed.append(dSpecies[i])
+        print('hog',*hed,sep='\t',file=fout)
+        for i in coreHOGs:
+            print(i,*dHOGs[i],sep='\t',file=fout)
 
-    for i in shellHOGs:
-        hog = shellHOGs[i]
-        for v in range(0,len(dSpecies)):
-            if dGeneNumbers[i][v] != 0:
-                if hog.passport[v] == 'wild':
-#                     print(hog.ID,hog.passport,dGeneNumbers[i])
-                    dStatus['wild'].add(hog.ID)
+    with open('single-copy.HOGs.tsv','w') as fout:
+        hed = []
+        for i in dSpecies:
+            hed.append(dSpecies[i])
+        print('hog',*hed,sep='\t',file=fout)
+        for i in scHOGs:
+            print(i,*dHOGs[i],sep='\t',file=fout)
 
-    for i in shellHOGs:
-        hog = shellHOGs[i]
-        for v in range(0,len(dSpecies)):
-            if dGeneNumbers[i][v] != 0:
-                if hog.passport[v] == 'feral':
-#                     print(hog.ID,hog.passport,dGeneNumbers[i])
-                    dStatus['cultivar'].add(hog.ID)
+    with open('shell.HOGs.tsv','w') as fout:
+        hed = []
+        for i in dSpecies:
+            hed.append(dSpecies[i])
+        print('hog',*hed,sep='\t',file=fout)
+        for i in shellHOGs:
+            print(i,*dHOGs[i],sep='\t',file=fout)
 
-    for i in shellHOGs:
-        hog = shellHOGs[i]
-        for v in range(0,len(dSpecies)):
-            if dGeneNumbers[i][v] != 0:
-                if hog.passport[v] == 'cultivar':
-#                     print(hog.ID,hog.passport,dGeneNumbers[i])
-                    dStatus['cultivar'].add(hog.ID)
+    with open('gt-specific.HOGs.tsv','w') as fout:
+        hed = []
+        for i in dSpecies:
+            hed.append(dSpecies[i])
+        print('hog',*hed,sep='\t',file=fout)
+        for i in gtHOGs:
+            print(i,*dHOGs[i],sep='\t',file=fout)
 
-
-    df = pd.DataFrame.from_dict(dStatus,orient='index')
-#     print(df)
-    df_transposed = df.T
-    print(df_transposed)
-    df_transposed.to_csv("shell_status_noferal.csv")
+    with open('cloud.unassigned_genes.tsv','w') as fout:
+        for i in dGenesMissing:
+            print(i,*dGenesMissing[i],file=fout)
 
 
-    for i in singleCopyConservedHOGs:
-        for sp in ddHOGs[i].members:
-            if ddHOGs[i].members[sp][''] != '': 
-#                 print(i,sp,ddHOGs[i].members[sp],len(ddHOGs[i].members[sp][''].split(', ')))
-                dSingleCopySummary[sp].append(len(ddHOGs[i].members[sp][''].split(', ')))
-            else:
-#                 print(i,sp,0)
-                dSingleCopySummary[sp].append(0)
 
-    for i in conservedHOGs:
-        for sp in ddHOGs[i].members:
-            if ddHOGs[i].members[sp][''] != '': 
-#                 print(i,sp,ddHOGs[i].members[sp],len(ddHOGs[i].members[sp][''].split(', ')))
-                dCoreSummary[sp].append(len(ddHOGs[i].members[sp][''].split(', ')))
-            else:
-#                 print(i,sp,0)
-                dCoreSummary[sp].append(0)
-
-    for i in variableHOGs:
-        for sp in ddHOGs[i].members:
-            if ddHOGs[i].members[sp][''] != '': 
-#                 print(i,sp,ddHOGs[i].members[sp],len(ddHOGs[i].members[sp][''].split(', ')))
-                dShellSummary[sp].append(len(ddHOGs[i].members[sp][''].split(', ')))
-            else:
-#                 print(i,sp,0)
-                dShellSummary[sp].append(0)
-
-
-    for i in dSingleCopySummary:
-        dSummary[i] = (sum(dSingleCopySummary[i]),sum(dCoreSummary[i]),sum(dShellSummary[i]),len(dGenesMissing[i]),dPassPortData[i][1])
-
-    df = pd.DataFrame.from_dict(dSummary,orient='index',columns=['single-copy','conserved','variable','cloud','status'])
-    df.index.name = 'genotype'
-    df['delta_conserved'] = df['conserved']-df['single-copy']
-    df['variableTotal'] = df['cloud']+df['variable']
-    df['Total'] = df['cloud']+df['conserved']+df['variable']
-    df['conserved_pct'] = df['conserved'].div(df['Total']).mul(100)
-    df['variable_pct'] = df['variableTotal'].div(df['Total']).mul(100)
-#     df['cloud_pct'] = df['variableTotal'].div(df['Total']).mul(100)
-#     df.loc['Mean',:] = df.mean(axis=0)
-    print(df)
-    df.to_csv('barley.conserved_variable.GeneNumbers_sorted.csv')
-
-
-    calcDistribution(dGeneNumbers,dGenesMissing)
-
-#     with open('core.HOGs.tsv','w') as fout:
-#         hed = []
-#         for i in dSpecies:
-#             hed.append(dSpecies[i])
-#         print('hog',*hed,sep='\t',file=fout)
-#         for i in coreHOGs:
-#             print(i,*dHOGs[i],sep='\t',file=fout)
-# 
-#     with open('single-copy.HOGs.tsv','w') as fout:
-#         hed = []
-#         for i in dSpecies:
-#             hed.append(dSpecies[i])
-#         print('hog',*hed,sep='\t',file=fout)
-#         for i in scHOGs:
-#             print(i,*dHOGs[i],sep='\t',file=fout)
-# 
-#     with open('shell.HOGs.tsv','w') as fout:
-#         hed = []
-#         for i in dSpecies:
-#             hed.append(dSpecies[i])
-#         print('hog',*hed,sep='\t',file=fout)
-#         for i in shellHOGs:
-#             print(i,*dHOGs[i],sep='\t',file=fout)
-# 
-#     with open('gt-specific.HOGs.tsv','w') as fout:
-#         hed = []
-#         for i in dSpecies:
-#             hed.append(dSpecies[i])
-#         print('hog',*hed,sep='\t',file=fout)
-#         for i in gtHOGs:
-#             print(i,*dHOGs[i],sep='\t',file=fout)
-# 
-#     with open('cloud.unassigned_genes.tsv','w') as fout:
-#         for i in dGenesMissing:
-#             print(i,*dGenesMissing[i],file=fout)
-#             
-
-
-      
 if __name__ == "__main__":
     main()
